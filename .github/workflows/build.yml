@@ -3,7 +3,7 @@ name: ArabOne iOS Build
 # يبنى تلقائيًا عند كل رفع، أو يدويًا من تبويب Actions
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
@@ -15,10 +15,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # نطبع هيكل الملفات أولًا — أي فشل يظهر سبه فورًا في السجل
+      - name: Show structure
+        run: |
+          echo "=== repo root ==="
+          ls -la
+          echo "=== find project ==="
+          find . -name "*.xcodeproj" -maxdepth 3
+
       # إصدار IPA غير موقّع — كل لاعب يوقعه بأداته (ESign / TrollStore / Sideloadly)
       - name: Build unsigned IPA
         run: |
-          cd ArabOneiOS
+          # نكتشف مكان المشروع تلقائيًا: جذر المستودع أو مجلد فرعي
+          PROJ=$(find . -name "ArabOne.xcodeproj" -maxdepth 3 | head -1)
+          PROJ_DIR=$(dirname "$PROJ")
+          echo "Project found at: $PROJ_DIR"
+          cd "$PROJ_DIR"
+
           xcodebuild -project ArabOne.xcodeproj \
                      -scheme ArabOne \
                      -configuration Release \
@@ -38,5 +51,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ArabOne-iOS-IPA
-          path: ArabOneiOS/ArabOne-unsigned.ipa
+          path: "**/ArabOne-unsigned.ipa"
           retention-days: 90
