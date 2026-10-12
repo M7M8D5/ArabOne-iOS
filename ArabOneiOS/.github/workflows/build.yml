@@ -1,0 +1,42 @@
+name: ArabOne iOS Build
+
+# يبنى تلقائيًا عند كل رفع، أو يدويًا من تبويب Actions
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # إصدار IPA غير موقّع — كل لاعب يوقعه بأداته (ESign / TrollStore / Sideloadly)
+      - name: Build unsigned IPA
+        run: |
+          cd ArabOneiOS
+          xcodebuild -project ArabOne.xcodeproj \
+                     -scheme ArabOne \
+                     -configuration Release \
+                     -sdk iphoneos \
+                     -derivedDataPath build \
+                     CODE_SIGN_IDENTITY="" \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGNING_ALLOWED=NO \
+                     build
+
+          # تجميع .app داخل IPA
+          mkdir -p Payload
+          cp -r build/Build/Products/Release-iphoneos/ArabOne.app Payload/
+          zip -r ArabOne-unsigned.ipa Payload
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ArabOne-iOS-IPA
+          path: ArabOneiOS/ArabOne-unsigned.ipa
+          retention-days: 90
